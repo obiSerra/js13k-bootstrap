@@ -10,7 +10,11 @@
   "author": "Roberto Serra <js13k@rserra.it>",
   "license": "MIT",
   "devDependencies": {
+    "css-loader": "^3.6.0",
     "html-webpack-plugin": "^4.3.0",
+    "sass": "^1.26.10",
+    "sass-loader": "^9.0.2",
+    "style-loader": "^1.2.1",
     "uglifyjs-webpack-plugin": "^2.2.0",
     "webpack": "^4.43.0",
     "webpack-bundle-analyzer": "^3.8.0",

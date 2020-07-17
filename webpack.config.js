@@ -18,9 +18,29 @@ module.exports = {
   plugins: [
     new HtmlWebpackPlugin({
       title: "js13k",
+      template: "src/index.html",
     }),
   ],
   optimization: {
     minimizer: [new UglifyJsPlugin()],
+  },
+  module: {
+    rules: [
+      {
+        test: /\.css$/i,
+        use: ["to-string-loader", "css-loader"],
+      },
+      {
+        test: /\.s[ac]ss$/i,
+        use: [
+          // Creates `style` nodes from JS strings
+          "style-loader",
+          // Translates CSS into CommonJS
+          "css-loader",
+          // Compiles Sass to CSS
+          "sass-loader",
+        ],
+      },
+    ],
   },
 };
