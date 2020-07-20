@@ -3,10 +3,10 @@
  */
 
 import { createStage, viewportDims, appendElement } from "./html.js";
-import createState from "./state";
-import gameLoop from "./engine";
+import createState from "./state.js";
+import gameLoop from "./engine.js";
 
-import "./styles/menu.scss";
+//import "./styles/menu.scss";
 
 const gameState = createState({
   showFps: true,
@@ -82,4 +82,5 @@ gameState.updateState((state) => {
 // });
 
 // Starting the game loop
+console.log("FOOOo");
 gameLoop(gameState);
