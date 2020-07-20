@@ -3,19 +3,62 @@
  */
 
 import createState from "./state.js";
-import gameLoop from "./engine.js";
+import gameLoop, { renderLoop, pxXSec2PxXFrame } from "./engine.js";
 import { hide, show, setStageDim, domElement } from "./domUtils.js";
 import createMenu from "./menus.js";
+import createEntity from "./entities.js";
 
 const gameState = createState({
   showFps: true,
 });
-gameState.updateStatus("init");
+gameState.updateGameStatus("init");
 const canvas = document.getElementById("stage");
 setStageDim(canvas);
 gameState.setState("canvas", canvas);
 gameState.setState("ctx", canvas.getContext("2d"));
 
+function startDemo1(gameState) {
+  // Add the game Elements
+  const greenSq = createEntity({
+    position: { x: 0, y: 0 },
+    pxXSec: 70,
+    run: (gameState, entity) => {
+      if (gameState.gameStatus() === "play") {
+        entity.position.x += pxXSec2PxXFrame(entity.pxXSec, gameState);
+      }
+      return entity;
+    },
+    render: (gameState, entity) => {
+      const ctx = gameState.getState("ctx");
+
+      ctx.fillStyle = "green";
+      ctx.fillRect(Math.floor(entity.position.x), entity.position.y, 150, 100);
+    },
+  });
+
+  const obstacles = [];
+
+  for (let i = 0; i < 40; i++) {
+    obstacles.push(
+      createEntity({
+        position: { x: Math.random() * 800, y: Math.random() * 600 },
+        render: (currentState, entity) => {
+          const ctx = gameState.getState("ctx");
+
+          ctx.fillStyle = "blue";
+          ctx.fillRect(Math.floor(entity.position.x), entity.position.y, 10, 10);
+        },
+      })
+    );
+  }
+
+  console.log(obstacles);
+  gameState.updateGameStatus("play").updateState((gameState) => ({ ...gameState, demo: "1", entities: [greenSq, ...obstacles] }));
+}
+/**
+ * Create the game elements
+ */
+// Menus
 const pauseMenu = createMenu(gameState, (menu, gameState) => {
   const button = domElement("#play-pause-btn");
   const element = domElement("#pause-menu-container");
@@ -31,7 +74,7 @@ const pauseMenu = createMenu(gameState, (menu, gameState) => {
 
       element.style.top = `${canvas.height - 50}px`;
       element.style.left = `${canvas.width - 100}px`;
-      if (gameState.status() === "play") {
+      if (gameState.gameStatus() === "play") {
         show(element);
       } else {
         hide(element);
@@ -41,10 +84,10 @@ const pauseMenu = createMenu(gameState, (menu, gameState) => {
 
   button.addEventListener("click", (evt) => {
     evt.preventDefault();
-    if (gameState.status() === "paused") {
-      gameState.updateStatus("play");
+    if (gameState.gameStatus() === "paused") {
+      gameState.updateGameStatus("play");
     } else {
-      gameState.updateStatus("paused");
+      gameState.updateGameStatus("paused");
     }
   });
   return { ...menu, ...menuInit };
@@ -53,14 +96,25 @@ const pauseMenu = createMenu(gameState, (menu, gameState) => {
 const mainMenu = createMenu(gameState, (menu, gameState) => {
   const menuContainer = domElement("#main-menu-container");
   const startBtn = domElement("#main-manu-start");
+  const continueBtn = domElement("#main-manu-continue");
   startBtn.addEventListener("click", (evt) => {
     evt.preventDefault();
-    gameState.updateStatus("play");
+    startDemo1(gameState);
+  });
+
+  continueBtn.addEventListener("click", (evt) => {
+    evt.preventDefault();
+    gameState.updateGameStatus("play");
   });
 
   const m = {
     render: (gameState) => {
-      if (gameState.status() === "play") {
+      if (gameState.getState("demo") === "1") {
+        show(continueBtn);
+      } else {
+        hide(continueBtn);
+      }
+      if (gameState.gameStatus() === "play") {
         hide(menuContainer);
       } else {
         show(menuContainer);
@@ -70,36 +124,11 @@ const mainMenu = createMenu(gameState, (menu, gameState) => {
   return { ...menu, ...m };
 });
 
+// Add the menus to the game state
 gameState.updateState((state) => {
   return { ...state, menu: { pause: pauseMenu, main: mainMenu } };
 });
 
-// const greenSq = {
-//   render: (gameState) => {
-//     const ctx = gameState.getState("ctx");
-
-//     ctx.fillStyle = "green";
-//     ctx.fillRect(10, 10, 150, 100);
-//   },
-// };
-
-// const pinkSq = {
-//   render: (gameState) => {
-//     const ctx = gameState.getState("ctx");
-
-//     ctx.fillStyle = "pink";
-//     ctx.fillRect(100, 20, 150, 100);
-//   },
-// };
-// gameState.updateState((state) => {
-//   const entities = state["entities"] || [];
-//   return { ...state, entities: [...entities, greenSq] };
-// });
-
-// gameState.updateState((state) => {
-//   const entities = state["entities"] || [];
-//   return { ...state, entities: [...entities, pinkSq] };
-// });
-
 // Starting the game loop
 gameLoop(gameState);
+renderLoop(gameState);
