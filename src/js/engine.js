@@ -43,7 +43,7 @@ export default function gameLoop(gameState) {
       //element.render(gameState);
     }
   });
-
+  //console.log(gameState.status());
   gameState.setState("lastTime", now);
   setTimeout(() => gameLoop(gameState), loopSpeed);
 }
