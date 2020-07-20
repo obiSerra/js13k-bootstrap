@@ -1,10 +1,10 @@
 const loopSpeed = Math.round(1000 / 75);
 
-function renderFps(val, ctx, canvas) {
+function renderFps(pos, val, ctx) {
   const fontSize = 10;
   ctx.font = `${fontSize}px sans-serif`;
   ctx.fillStyle = "black";
-  ctx.fillText(`${val} FPS`, canvas.width - 4 * fontSize, fontSize * 1.5);
+  ctx.fillText(val, pos.x, pos.y);
 }
 export default function gameLoop(gameState) {
   const tick = gameState.getState("tick", 0);
@@ -38,9 +38,17 @@ export default function gameLoop(gameState) {
 export function renderLoop(gameState) {
   const ctx = gameState.getState("ctx");
   const canvas = gameState.getState("canvas");
+  const lastTime = gameState.getState("lastTimeRender", +new Date());
+  const now = +new Date();
+  const deltaTime = now - lastTime;
+
+  const actualFps = Math.round(1000 / deltaTime);
+  gameState.setState("actualFpsRender", actualFps);
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  renderFps(gameState.getState("actualFps"), ctx, canvas);
+  renderFps({x: 755, y: 580}, `${gameState.getState("actualFps")} FPS`, ctx);
+  renderFps({x: 755, y: 590}, `${gameState.getState("actualFpsRender")} FPSR`, ctx);
+
   const entities = gameState.getState("entities", []);
 
   const menus = gameState.getState("menu");
@@ -58,6 +66,7 @@ export function renderLoop(gameState) {
       element.render(gameState, element);
     }
   });
+  gameState.setState("lastTimeRender", now);
 
   window.requestAnimationFrame(() => renderLoop(gameState));
 }
