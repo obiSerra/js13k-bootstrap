@@ -9,7 +9,7 @@ import createMenu from "./menus.js";
 import createEntity from "./entities.js";
 
 const gameState = createState({
-  showFps: true,
+  showFps: true
 });
 gameState.updateGameStatus("init");
 const canvas = document.getElementById("stage");
@@ -20,8 +20,10 @@ gameState.setState("ctx", canvas.getContext("2d"));
 function startDemo1(gameState) {
   // Add the game Elements
   const greenSq = createEntity({
-    position: { x: 0, y: 0 },
+    position: { x: 0, y: 200 },
+    box: { w: 50, h: 50 },
     pxXSec: 70,
+    moving: true,
     run: (gameState, entity) => {
       if (gameState.gameStatus() === "play") {
         entity.position.x += pxXSec2PxXFrame(entity.pxXSec, gameState);
@@ -32,28 +34,55 @@ function startDemo1(gameState) {
       const ctx = gameState.getState("ctx");
 
       ctx.fillStyle = "green";
-      ctx.fillRect(Math.floor(entity.position.x), entity.position.y, 150, 100);
+      ctx.fillRect(
+        Math.floor(entity.position.x),
+        entity.position.y,
+        entity.box.w,
+        entity.box.h
+      );
     },
+    onCollide: (self, other) => self
   });
 
   const obstacles = [];
 
-  for (let i = 0; i < 40; i++) {
+  for (let i = 0; i < 200; i++) {
     obstacles.push(
       createEntity({
         position: { x: Math.random() * 800, y: Math.random() * 600 },
+
+        box: { w: 10, h: 10 },
+        color: "blue",
+        run: (currentState, entity) => {
+          entity.color = "blue";
+          return entity;
+        },
         render: (currentState, entity) => {
           const ctx = gameState.getState("ctx");
-
-          ctx.fillStyle = "blue";
-          ctx.fillRect(Math.floor(entity.position.x), entity.position.y, 10, 10);
+          ctx.fillStyle = entity.color;
+          ctx.fillRect(
+            Math.floor(entity.position.x),
+            entity.position.y,
+            entity.box.w,
+            entity.box.h
+          );
         },
+        onCollide: (obstacle, other, gameState) => {
+          obstacle.color = "pink";
+          gameState.updateState(gameData => ({
+            ...gameData,
+            entities: gameData.entities.filter(e => e.id !== obstacle.id)
+          }));
+        }
       })
     );
   }
 
-  console.log(obstacles);
-  gameState.updateGameStatus("play").updateState((gameState) => ({ ...gameState, demo: "1", entities: [greenSq, ...obstacles] }));
+  gameState.updateGameStatus("play").updateState(gameState => ({
+    ...gameState,
+    demo: "1",
+    entities: [greenSq, ...obstacles]
+  }));
 }
 /**
  * Create the game elements
@@ -67,7 +96,7 @@ const pauseMenu = createMenu(gameState, (menu, gameState) => {
     hide: () => hide(element),
     element: element,
     button: button,
-    render: (gameState) => {
+    render: gameState => {
       // Dynamic menu position
       const canvas = gameState.getState("canvas");
       element.style.position = "absolute";
@@ -79,10 +108,10 @@ const pauseMenu = createMenu(gameState, (menu, gameState) => {
       } else {
         hide(element);
       }
-    },
+    }
   };
 
-  button.addEventListener("click", (evt) => {
+  button.addEventListener("click", evt => {
     evt.preventDefault();
     if (gameState.gameStatus() === "paused") {
       gameState.updateGameStatus("play");
@@ -97,18 +126,18 @@ const mainMenu = createMenu(gameState, (menu, gameState) => {
   const menuContainer = domElement("#main-menu-container");
   const startBtn = domElement("#main-manu-start");
   const continueBtn = domElement("#main-manu-continue");
-  startBtn.addEventListener("click", (evt) => {
+  startBtn.addEventListener("click", evt => {
     evt.preventDefault();
     startDemo1(gameState);
   });
 
-  continueBtn.addEventListener("click", (evt) => {
+  continueBtn.addEventListener("click", evt => {
     evt.preventDefault();
     gameState.updateGameStatus("play");
   });
 
   const m = {
-    render: (gameState) => {
+    render: gameState => {
       if (gameState.getState("demo") === "1") {
         show(continueBtn);
       } else {
@@ -119,13 +148,13 @@ const mainMenu = createMenu(gameState, (menu, gameState) => {
       } else {
         show(menuContainer);
       }
-    },
+    }
   };
   return { ...menu, ...m };
 });
 
 // Add the menus to the game state
-gameState.updateState((state) => {
+gameState.updateState(state => {
   return { ...state, menu: { pause: pauseMenu, main: mainMenu } };
 });
 
