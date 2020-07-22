@@ -1,3 +1,4 @@
 node_modules/
 dist/
-*.zipsrc/js/.tern-port
+*.zip
+.tern-port
