@@ -11,8 +11,24 @@ function updateState(state, updateFn) {
 function getState(state, key, defaultValue = null) {
   return typeof state[key] !== "undefined" ? state[key] : defaultValue;
 }
+
 export default function createState(initialState = {}) {
-  let stateData = initialState;
+  const defaultStateData = {
+    entities: [],
+    menus: {},
+    ctrl: {},
+  };
+
+  let stateData = { ...defaultStateData, ...initialState };
+
+  const removeCtrl = (name) => {
+    if (typeof stateData.ctrls[name] !== "undefined") {
+      if (typeof stateData.ctrls[name].onRemove === "function") {
+        stateData.ctrls[name].onRemove(stateData.ctrls[name]);
+      }
+      delete stateData.ctrls[name];
+    }
+  };
 
   // TODO add some special fields (status)
   const stateModel = {
@@ -29,6 +45,19 @@ export default function createState(initialState = {}) {
     updateState: (updateFn) => {
       stateData = updateState(stateData, updateFn);
       return stateModel;
+    },
+    addCtrl: (name, ctrl) => {
+      const newCtrl = {};
+      newCtrl[name] = ctrl;
+      stateData = { ...stateData, ctrls: { ...stateData.ctrls, ...newCtrl } };
+    },
+    removeCtrl,
+    removeAllCtrls: () => {
+      for (let k in stateData.ctrls) {
+        if (stateData.ctrls.hasOwnProperty(k)) {
+          removeCtrl(k);
+        }
+      }
     },
   };
   return stateModel;
