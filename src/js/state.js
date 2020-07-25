@@ -1,3 +1,5 @@
+import createAudioCtrl from "./audio.js";
+
 function setState(state, key, value) {
   const newState = { ...state };
   newState[key] = value;
@@ -17,6 +19,7 @@ export default function createState(initialState = {}) {
     entities: [],
     menus: {},
     ctrl: {},
+    audioCtrl: createAudioCtrl(),
   };
 
   let stateData = { ...defaultStateData, ...initialState };

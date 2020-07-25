@@ -6,6 +6,8 @@ import createEntity from "./entities.js";
 import createController, { addEventListener } from "./controller.js";
 import { renderText } from "./rendering.js";
 
+import { playSound } from "./audio.js";
+
 /**
  *  This file contains all the demo game logic
  *
@@ -125,7 +127,9 @@ function startDemo1(gameState) {
       ctx.fillStyle = "green";
       ctx.fillRect(Math.floor(entity.position.x), entity.position.y, entity.box.w, entity.box.h);
     },
-    onCollide: (self, other) => self,
+    onCollide: (self, other) => {
+      return self;
+    },
   });
 
   const obstacles = [];
@@ -134,7 +138,7 @@ function startDemo1(gameState) {
     obstacles.push(
       createEntity({
         position: { x: Math.random() * 800, y: Math.random() * 600 },
-
+        type: "point",
         box: { w: 10, h: 10 },
         color: "blue",
         run: (currentState, entity) => {
@@ -207,6 +211,7 @@ const mainMenu = createMenu(gameState, (menu, gameState) => {
   const menuContainer = domElement("#main-menu-container");
   const startBtn = domElement("#main-manu-start");
   const continueBtn = domElement("#main-manu-continue");
+  const playButton = domElement("#main-manu-sound");
   startBtn.addEventListener("click", (evt) => {
     evt.preventDefault();
     startDemo1(gameState);
@@ -215,6 +220,31 @@ const mainMenu = createMenu(gameState, (menu, gameState) => {
   continueBtn.addEventListener("click", (evt) => {
     evt.preventDefault();
     gameState.updateGameStatus("play");
+  });
+
+  playButton.addEventListener("click", (evt) => {
+    evt.preventDefault();
+
+    const waveNote = (note) => ({ ...note, oscillator: "triangle" });
+
+    const sectOctave = (note) => `${note}3`;
+    playSound(gameState, waveNote({ note: sectOctave("G"), duration: 0.3 }))
+      .then(() => playSound(gameState, waveNote({ note: null, duration: 0.3 })))
+      .then(() => playSound(gameState, waveNote({ note: sectOctave("G"), duration: 0.3 })))
+      .then(() => playSound(gameState, waveNote({ note: null, duration: 0.3 })))
+      .then(() => playSound(gameState, waveNote({ note: sectOctave("G"), duration: 0.3 })))
+      .then(() => playSound(gameState, waveNote({ note: null, duration: 0.3 })))
+      .then(() => playSound(gameState, waveNote({ note: sectOctave("D#"), duration: 0.4 })))
+      .then(() => playSound(gameState, waveNote({ note: null, duration: 0.05 })))
+      .then(() => playSound(gameState, waveNote({ note: sectOctave("A#"), duration: 0.2 })))
+      .then(() => playSound(gameState, waveNote({ note: null, duration: 0.05 })))
+      .then(() => playSound(gameState, waveNote({ note: sectOctave("G"), duration: 0.2 })))
+      .then(() => playSound(gameState, waveNote({ note: null, duration: 0.3 })))
+      .then(() => playSound(gameState, waveNote({ note: sectOctave("D#"), duration: 0.4 })))
+      .then(() => playSound(gameState, waveNote({ note: null, duration: 0.05 })))
+      .then(() => playSound(gameState, waveNote({ note: sectOctave("A#"), duration: 0.2 })))
+      .then(() => playSound(gameState, waveNote({ note: null, duration: 0.05 })))
+      .then(() => playSound(gameState, waveNote({ note: sectOctave("G"), duration: 0.2 })));
   });
 
   const m = {
