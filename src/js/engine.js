@@ -1,21 +1,28 @@
 import { renderText } from "./rendering.js";
 
 const loopSpeed = Math.round(1000 / 75);
+const cols = 100;
+const row = 100;
 
 function rowIndexToLetter(num, rows, height) {
   return String.fromCharCode(Math.floor(num / (height / rows)) + 97);
 }
+
 function generateSpacialHash(gameState) {
-  const entities = gameState.getState("entities", []);
   const cols = 10;
   const row = 10;
+  const entities = gameState.getState("entities", []);
+
+  const canvas = gameState.getState("canvas");
+  const cW = canvas.width / cols;
+  const rW = canvas.height / row;
+
   const hash = entities.reduce(
     (acc, val) => {
-      const canvas = gameState.getState("canvas");
       const pos = val.position;
+
       const c = Math.floor(pos.x / (canvas.width / cols));
       const r = rowIndexToLetter(pos.y, row, canvas.height);
-
       const idx = c + "-" + r;
       acc[idx] = acc[idx] || [];
       acc[idx].push(val);
@@ -33,6 +40,7 @@ export default function gameLoop(gameState) {
   const lastTime = gameState.getState("lastTime", +new Date());
   const deltaTime = now - lastTime;
   const actualFps = Math.round(1000 / deltaTime);
+  const canvas = gameState.getState("canvas");
 
   gameState.setState("actualFps", actualFps);
   gameState.setState("tick", tick + 1);
@@ -48,47 +56,106 @@ export default function gameLoop(gameState) {
       .getState("entities", [])
       .map((element) => {
         if (typeof element.run === "function") {
-          element.run(gameState, element);
+          element = element.run(gameState, element);
+        }
+        return element;
+      })
+      .map((element) => {
+        if (element && typeof element.onBorderCollide === "function") {
+          if (element.position.x <= 0) {
+            element.onBorderCollide(gameState, element, "left");
+          } else if (element.position.x >= canvas.width) {
+            element.onBorderCollide(gameState, element, "right");
+          } else if (element.position.y <= 0) {
+            element.onBorderCollide(gameState, element, "top");
+          } else if (element.position.y >= canvas.height) {
+            element.onBorderCollide(gameState, element, "bottom");
+          }
         }
         return element;
       })
       .filter((element) => !!element),
   }));
 
-  const spacialHash = generateSpacialHash(gameState);
-  gameState.getState("entities", []).forEach((element) => {
-    for (let k in spacialHash) {
-      if (k !== "config" && spacialHash.hasOwnProperty(k)) {
-        if (spacialHash[k].some((v) => v.id === element.id)) {
-          const ks = k.split("-");
-          const c = parseInt(ks[0], 10);
-          const r = ks[1].charCodeAt(0);
-          let adj = [];
-          for (let j = c - 1; j <= c + 1; j++) {
-            for (let y = r - 1; y <= r + 1; y++) {
-              if (spacialHash[j + "-" + String.fromCharCode(y)]) {
-                adj = [...adj, ...spacialHash[j + "-" + String.fromCharCode(y)]];
-              }
-            }
-          }
+  const startDebug = +new Date();
 
-          for (let i = 0; i < adj.length; i++) {
-            if ((element.moving || adj[i].moving) && adj[i].id !== element.id && typeof element.onCollide === "function" && collide(element, adj[i])) {
-              element.onCollide(element, adj[i], gameState);
+  const spacialHash = generateSpacialHash(gameState, cols, row);
+
+  gameState
+    .getState("entities", [])
+    .map((el) => {
+      el.isColliding = false;
+      return el;
+    })
+    .forEach((element) => {
+      for (let k in spacialHash) {
+        if (k !== "config" && spacialHash.hasOwnProperty(k)) {
+          if (spacialHash[k].some((v) => v.id === element.id)) {
+            const ks = k.split("-");
+            const c = parseInt(ks[0], 10);
+            const r = ks[1].charCodeAt(0);
+            let adj = [...spacialHash[k]];
+            for (let i = 0; i < adj.length; i++) {
+              if (
+                (element.moving || adj[i].moving) &&
+                adj[i].id !== element.id &&
+                element.canCollide &&
+                collide(element, adj[i])
+              ) {
+                element.isColliding = true;
+              }
             }
           }
         }
       }
-    }
-    return element;
-  });
+      return element;
+    });
+  //console.log("end", +new Date() - startDebug);
 
   gameState.setState("lastTime", now);
   setTimeout(() => gameLoop(gameState), loopSpeed);
 }
 
+function renderGrid(gameState, cols, row) {
+  const canvas = gameState.getState("canvas");
+  const ctx = gameState.getState("ctx");
+
+  const cW = canvas.width / cols;
+  const rW = canvas.height / row;
+
+  for (let i = 0; i <= cols; i++) {
+    ctx.beginPath(); // Start a new path
+    ctx.strokeStyle = "red";
+    ctx.moveTo(cW * i, 0);
+    ctx.lineTo(cW * i, canvas.height);
+    ctx.stroke();
+  }
+  for (let i = 0; i <= row; i++) {
+    ctx.beginPath(); // Start a new path
+    ctx.strokeStyle = "blue";
+    ctx.moveTo(0, rW * i);
+    ctx.lineTo(canvas.width, rW * i);
+    ctx.stroke();
+  }
+}
+
+function drawBox(gameState, entity) {
+  const ctx = gameState.getState("ctx");
+  ctx.beginPath(); // Start a new path
+  ctx.strokeStyle = "red";
+  const cb = entity.collideBox(entity);
+  ctx.moveTo(cb.a, cb.c);
+  ctx.lineTo(cb.a, cb.d);
+  ctx.lineTo(cb.b, cb.d);
+  ctx.lineTo(cb.b, cb.c);
+  ctx.lineTo(cb.a, cb.c);
+
+  ctx.stroke();
+}
+
 export function renderLoop(gameState) {
-  const renderFps = (msg, pos) => renderText(gameState, msg, pos, "black", "10px sans-serif");
+  const renderFps = (msg, pos) =>
+    renderText(gameState, msg, pos, "black", "10px sans-serif");
   const ctx = gameState.getState("ctx");
   const canvas = gameState.getState("canvas");
   const lastTime = gameState.getState("lastTimeRender", +new Date());
@@ -100,7 +167,14 @@ export function renderLoop(gameState) {
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   renderFps(`${gameState.getState("actualFps")} FPS`, { x: 755, y: 580 });
-  renderFps(`${gameState.getState("actualFpsRender")} FPSR`, { x: 755, y: 590 });
+  renderFps(`${gameState.getState("actualFpsRender")} FPSR`, {
+    x: 755,
+    y: 590,
+  });
+
+  if (gameState.getState("showGrid")) {
+    renderGrid(gameState, cols, row);
+  }
 
   const entities = gameState.getState("entities", []);
 
@@ -126,6 +200,7 @@ export function renderLoop(gameState) {
   }
   entities.forEach((element) => {
     if (typeof element.render === "function") {
+      drawBox(gameState, element);
       element.render(gameState, element);
     }
   });
@@ -142,5 +217,19 @@ export function collide(el1, el2) {
   const rect1 = { ...el1.position, ...el1.box };
   const rect2 = { ...el2.position, ...el2.box };
 
-  return rect1.x < rect2.x + rect2.w && rect1.x + rect1.w > rect2.x && rect1.y < rect2.y + rect2.h && rect1.y + rect1.h > rect2.y;
+  if (
+    typeof el1.collideBox === "function" &&
+    typeof el2.collideBox === "function"
+  ) {
+    const cb1 = el1.collideBox(el1);
+    const cb2 = el2.collideBox(el2);
+    return cb1.a < cb2.b && cb1.b > cb2.a && cb1.c < cb2.d && cb1.d > cb2.c;
+  } else {
+    return (
+      rect1.x < rect2.x + rect2.w &&
+      rect1.x + rect1.w > rect2.x &&
+      rect1.y < rect2.y + rect2.h &&
+      rect1.y + rect1.h > rect2.y
+    );
+  }
 }

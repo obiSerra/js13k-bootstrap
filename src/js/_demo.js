@@ -59,7 +59,8 @@ function demoControllers(gameState) {
   const keyboardCtrl = createController(initCtrl);
 
   keyboardCtrl.render = (gameState) => {
-    const renderCtrl = (msg, pos) => renderText(gameState, msg, pos, "black", "60px sans-serif");
+    const renderCtrl = (msg, pos) =>
+      renderText(gameState, msg, pos, "black", "60px sans-serif");
     const mv = gameState.getState("moveV");
     const mh = gameState.getState("moveH");
     if (mv === "up") {
@@ -74,7 +75,8 @@ function demoControllers(gameState) {
     }
   };
 
-  const addKeyboardListener = (eventName, evtFunction) => addEventListener(gameState, keyboardCtrl, eventName, evtFunction);
+  const addKeyboardListener = (eventName, evtFunction) =>
+    addEventListener(gameState, keyboardCtrl, eventName, evtFunction);
 
   addKeyboardListener("keydown", onKeyDown);
   addKeyboardListener("keyup", onKeyUp);
@@ -87,6 +89,105 @@ setStageDim(canvas);
 gameState.setState("canvas", canvas);
 gameState.setState("ctx", canvas.getContext("2d"));
 
+function startDemo2(gameState) {
+  gameState.removeAllCtrls();
+  const colors = [
+    "#ff0000",
+    "#ffa500",
+    "#ffff00",
+    "#008000",
+    "#0000ff",
+    "#4b0082",
+    "#ee82ee",
+  ];
+  const obstacles = [];
+
+  for (let i = 0; i < 20; i++) {
+    obstacles.push(
+      createEntity({
+        position: { x: Math.random() * 800, y: Math.random() * 600 },
+
+        collideBox: (element) => ({
+          a: element.position.x - element.box.w,
+          b: element.position.x + element.box.w,
+          c: element.position.y - element.box.h,
+          d: element.position.y + element.box.h,
+        }),
+
+        colIdx: -1,
+        type: "point",
+        box: { w: 5, h: 5 },
+        direction: {
+          x: Math.random() < 0.5 ? -1 : 1,
+          y: Math.random() < 0.5 ? -1 : 1,
+        },
+        r: 5,
+
+        color: "black",
+        moving: true,
+        canCollide: true,
+        run: (currentState, entity) => {
+          entity.position = {
+            y: entity.position.y + Math.random() * 1.5 * entity.direction.y,
+            x: entity.position.x + Math.random() * 1.5 * entity.direction.x,
+          };
+          if (entity.isColliding) {
+            const idx = (entity.colIdx + 1) % colors.length;
+            if (idx <= colors.length) {
+              entity.colIdx = idx;
+              entity.color = colors[idx];
+            }
+          }
+
+          return entity;
+        },
+        render: (currentState, entity) => {
+          const ctx = gameState.getState("ctx");
+          ctx.fillStyle = entity.color;
+
+          ctx.beginPath();
+          ctx.arc(
+            Math.floor(entity.position.x),
+            Math.floor(entity.position.y),
+            entity.r,
+            0,
+            2 * Math.PI
+          );
+          ctx.fill();
+        },
+        onBorderCollide: (gameState, element, border) => {
+          switch (border) {
+            case "left":
+            case "right":
+              element.direction.x = -element.direction.x;
+              break;
+            case "top":
+            case "bottom":
+              element.direction.y = -element.direction.y;
+              break;
+          }
+
+          gameState.updateState((gameData) => ({
+            ...gameData,
+            entities: gameData.entities.map((e) =>
+              e.id === element.id ? element : e
+            ),
+          }));
+        },
+      })
+    );
+  }
+
+  gameState.updateGameStatus("play").updateState((gameState) => ({
+    ...gameState,
+    demo: "2",
+    minFpsRender: Infinity,
+    minFps: Infinity,
+    showGrid: false,
+    entities: [...obstacles],
+  }));
+}
+
 function startDemo1(gameState) {
   // Add the game Elements
 
@@ -97,6 +198,7 @@ function startDemo1(gameState) {
     box: { w: 50, h: 50 },
     pxXSec: 120,
     moving: true,
+    canCollide: true,
     run: (gameState, entity) => {
       if (gameState.gameStatus() === "play") {
         let x = entity.position.x;
@@ -125,37 +227,43 @@ function startDemo1(gameState) {
       const ctx = gameState.getState("ctx");
 
       ctx.fillStyle = "green";
-      ctx.fillRect(Math.floor(entity.position.x), entity.position.y, entity.box.w, entity.box.h);
-    },
-    onCollide: (self, other) => {
-      return self;
+      ctx.fillRect(
+        Math.floor(entity.position.x),
+        entity.position.y,
+        entity.box.w,
+        entity.box.h
+      );
     },
   });
 
   const obstacles = [];
 
-  for (let i = 0; i < 200; i++) {
+  for (let i = 0; i < 400; i++) {
     obstacles.push(
       createEntity({
         position: { x: Math.random() * 800, y: Math.random() * 600 },
         type: "point",
         box: { w: 10, h: 10 },
         color: "blue",
+        canCollide: true,
         run: (currentState, entity) => {
-          entity.color = "blue";
+          if (entity.isColliding) {
+            entity = null;
+          } else {
+            entity.color = "blue";
+          }
+
           return entity;
         },
         render: (currentState, entity) => {
           const ctx = gameState.getState("ctx");
           ctx.fillStyle = entity.color;
-          ctx.fillRect(Math.floor(entity.position.x), entity.position.y, entity.box.w, entity.box.h);
-        },
-        onCollide: (obstacle, other, gameState) => {
-          obstacle.color = "pink";
-          gameState.updateState((gameData) => ({
-            ...gameData,
-            entities: gameData.entities.filter((e) => e.id !== obstacle.id),
-          }));
+          ctx.fillRect(
+            Math.floor(entity.position.x),
+            entity.position.y,
+            entity.box.w,
+            entity.box.h
+          );
         },
       })
     );
@@ -164,6 +272,10 @@ function startDemo1(gameState) {
   gameState.updateGameStatus("play").updateState((gameState) => ({
     ...gameState,
     demo: "1",
+    minFpsRender: Infinity,
+    showGrid: false,
+
+    minFps: Infinity,
     entities: [greenSq, ...obstacles],
   }));
 
@@ -210,11 +322,18 @@ const pauseMenu = createMenu(gameState, (menu, gameState) => {
 const mainMenu = createMenu(gameState, (menu, gameState) => {
   const menuContainer = domElement("#main-menu-container");
   const startBtn = domElement("#main-manu-start");
+  const startBtn2 = domElement("#main-manu-start2");
+
   const continueBtn = domElement("#main-manu-continue");
   const playButton = domElement("#main-manu-sound");
   startBtn.addEventListener("click", (evt) => {
     evt.preventDefault();
     startDemo1(gameState);
+  });
+
+  startBtn2.addEventListener("click", (evt) => {
+    evt.preventDefault();
+    startDemo2(gameState);
   });
 
   continueBtn.addEventListener("click", (evt) => {
@@ -230,26 +349,62 @@ const mainMenu = createMenu(gameState, (menu, gameState) => {
     const sectOctave = (note) => `${note}3`;
     playSound(gameState, waveNote({ note: sectOctave("G"), duration: 0.3 }))
       .then(() => playSound(gameState, waveNote({ note: null, duration: 0.3 })))
-      .then(() => playSound(gameState, waveNote({ note: sectOctave("G"), duration: 0.3 })))
+      .then(() =>
+        playSound(gameState, waveNote({ note: sectOctave("G"), duration: 0.3 }))
+      )
       .then(() => playSound(gameState, waveNote({ note: null, duration: 0.3 })))
-      .then(() => playSound(gameState, waveNote({ note: sectOctave("G"), duration: 0.3 })))
+      .then(() =>
+        playSound(gameState, waveNote({ note: sectOctave("G"), duration: 0.3 }))
+      )
       .then(() => playSound(gameState, waveNote({ note: null, duration: 0.3 })))
-      .then(() => playSound(gameState, waveNote({ note: sectOctave("D#"), duration: 0.4 })))
-      .then(() => playSound(gameState, waveNote({ note: null, duration: 0.05 })))
-      .then(() => playSound(gameState, waveNote({ note: sectOctave("A#"), duration: 0.2 })))
-      .then(() => playSound(gameState, waveNote({ note: null, duration: 0.05 })))
-      .then(() => playSound(gameState, waveNote({ note: sectOctave("G"), duration: 0.2 })))
+      .then(() =>
+        playSound(
+          gameState,
+          waveNote({ note: sectOctave("D#"), duration: 0.4 })
+        )
+      )
+      .then(() =>
+        playSound(gameState, waveNote({ note: null, duration: 0.05 }))
+      )
+      .then(() =>
+        playSound(
+          gameState,
+          waveNote({ note: sectOctave("A#"), duration: 0.2 })
+        )
+      )
+      .then(() =>
+        playSound(gameState, waveNote({ note: null, duration: 0.05 }))
+      )
+      .then(() =>
+        playSound(gameState, waveNote({ note: sectOctave("G"), duration: 0.2 }))
+      )
       .then(() => playSound(gameState, waveNote({ note: null, duration: 0.3 })))
-      .then(() => playSound(gameState, waveNote({ note: sectOctave("D#"), duration: 0.4 })))
-      .then(() => playSound(gameState, waveNote({ note: null, duration: 0.05 })))
-      .then(() => playSound(gameState, waveNote({ note: sectOctave("A#"), duration: 0.2 })))
-      .then(() => playSound(gameState, waveNote({ note: null, duration: 0.05 })))
-      .then(() => playSound(gameState, waveNote({ note: sectOctave("G"), duration: 0.2 })));
+      .then(() =>
+        playSound(
+          gameState,
+          waveNote({ note: sectOctave("D#"), duration: 0.4 })
+        )
+      )
+      .then(() =>
+        playSound(gameState, waveNote({ note: null, duration: 0.05 }))
+      )
+      .then(() =>
+        playSound(
+          gameState,
+          waveNote({ note: sectOctave("A#"), duration: 0.2 })
+        )
+      )
+      .then(() =>
+        playSound(gameState, waveNote({ note: null, duration: 0.05 }))
+      )
+      .then(() =>
+        playSound(gameState, waveNote({ note: sectOctave("G"), duration: 0.2 }))
+      );
   });
 
   const m = {
     render: (gameState) => {
-      if (gameState.getState("demo") === "1") {
+      if (!!gameState.getState("demo")) {
         show(continueBtn);
       } else {
         hide(continueBtn);
