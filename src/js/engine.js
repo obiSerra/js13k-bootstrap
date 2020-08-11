@@ -1,6 +1,6 @@
 import { renderText } from "./rendering.js";
 
-const loopSpeed = Math.round(1000 / 75);
+const loopSpeed = Math.round(1000 / 60);
 const cols = 100;
 const row = 100;
 
@@ -79,37 +79,37 @@ export default function gameLoop(gameState) {
 
   const startDebug = +new Date();
 
-  const spacialHash = generateSpacialHash(gameState, cols, row);
+  // const spacialHash = generateSpacialHash(gameState, cols, row);
 
-  gameState
-    .getState("entities", [])
-    .map((el) => {
-      el.isColliding = false;
-      return el;
-    })
-    .forEach((element) => {
-      for (let k in spacialHash) {
-        if (k !== "config" && spacialHash.hasOwnProperty(k)) {
-          if (spacialHash[k].some((v) => v.id === element.id)) {
-            const ks = k.split("-");
-            const c = parseInt(ks[0], 10);
-            const r = ks[1].charCodeAt(0);
-            let adj = [...spacialHash[k]];
-            for (let i = 0; i < adj.length; i++) {
-              if (
-                (element.moving || adj[i].moving) &&
-                adj[i].id !== element.id &&
-                element.canCollide &&
-                collide(element, adj[i])
-              ) {
-                element.isColliding = true;
-              }
-            }
-          }
-        }
-      }
-      return element;
-    });
+  // gameState
+  //   .getState("entities", [])
+  //   .map((el) => {
+  //     el.isColliding = false;
+  //     return el;
+  //   })
+  //   .forEach((element) => {
+  //     for (let k in spacialHash) {
+  //       if (k !== "config" && spacialHash.hasOwnProperty(k)) {
+  //         if (spacialHash[k].some((v) => v.id === element.id)) {
+  //           const ks = k.split("-");
+  //           const c = parseInt(ks[0], 10);
+  //           const r = ks[1].charCodeAt(0);
+  //           let adj = [...spacialHash[k]];
+  //           for (let i = 0; i < adj.length; i++) {
+  //             if (
+  //               (element.moving || adj[i].moving) &&
+  //               adj[i].id !== element.id &&
+  //               element.canCollide &&
+  //               collide(element, adj[i])
+  //             ) {
+  //               element.isColliding = true;
+  //             }
+  //           }
+  //         }
+  //       }
+  //     }
+  //     return element;
+  //   });
   //console.log("end", +new Date() - startDebug);
 
   gameState.setState("lastTime", now);
@@ -140,6 +140,7 @@ function renderGrid(gameState, cols, row) {
 }
 
 function drawBox(gameState, entity) {
+  if (typeof entity.collideBox !== "function") return false;
   const ctx = gameState.getState("ctx");
   ctx.beginPath(); // Start a new path
   ctx.strokeStyle = "red";
@@ -155,7 +156,7 @@ function drawBox(gameState, entity) {
 
 export function renderLoop(gameState) {
   const renderFps = (msg, pos) =>
-    renderText(gameState, msg, pos, "black", "10px sans-serif");
+    renderText(gameState, msg, pos, "green", "10px sans-serif");
   const ctx = gameState.getState("ctx");
   const canvas = gameState.getState("canvas");
   const lastTime = gameState.getState("lastTimeRender", +new Date());
@@ -166,6 +167,53 @@ export function renderLoop(gameState) {
   gameState.setState("actualFpsRender", actualFps);
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const map = gameState.getState("map");
+  ctx.fillStyle = "black";
+
+  // TODO calculate and render only tiles in view
+  if (map) {
+    const pov = {
+      x: canvas.width / 2 - map.cameraPos.x * map.tsize,
+      y: canvas.height / 2 - map.cameraPos.y * map.tsize,
+    };
+    const startCol = Math.max(0, map.cameraPos.x - map.viewWidth / 2);
+    const endCol = Math.min(map.cols, map.cameraPos.x + map.viewWidth / 2);
+    const startRow = Math.max(0, map.cameraPos.y - map.viewHeight / 2);
+    const endRow = Math.min(map.rows, map.cameraPos.y + map.viewHeight / 2);
+
+    ctx.beginPath();
+    ctx.fillStyle = "black";
+
+    for (var c = startCol; c < endCol; c++) {
+      for (var r = startRow; r < endRow; r++) {
+        var tile = map.getTile(c, r);
+
+        if (tile) {
+          // 0 => empty tile
+          ctx.rect(
+            c * map.tsize + pov.x,
+            r * map.tsize + pov.y,
+            map.tsize,
+            map.tsize
+          );
+        }
+      }
+    }
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.fillStyle = "red";
+
+    ctx.arc(
+      Math.floor(map.cameraPos.x * map.tsize) + pov.x,
+      Math.floor(map.cameraPos.y * map.tsize) + pov.y,
+      10,
+      0,
+      2 * Math.PI
+    );
+    ctx.fill();
+  }
+
   renderFps(`${gameState.getState("actualFps")} FPS`, { x: 755, y: 580 });
   renderFps(`${gameState.getState("actualFpsRender")} FPSR`, {
     x: 755,

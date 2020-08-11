@@ -1,10 +1,12 @@
 import createState from "./state.js";
 import { pxXSec2PxXFrame } from "./engine.js";
-import { hide, show, setStageDim, domElement } from "./domUtils.js";
+import { hide, show, domElement } from "./domUtils.js";
 import createMenu from "./menus.js";
 import createEntity from "./entities.js";
 import createController, { addEventListener } from "./controller.js";
 import { renderText } from "./rendering.js";
+
+import { generateMap, setCamera } from "./map.js";
 
 import { playSound } from "./audio.js";
 
@@ -16,6 +18,7 @@ import { playSound } from "./audio.js";
 
 const gameState = createState({
   showFps: true,
+  tileSize: 20,
 });
 
 function demoControllers(gameState) {
@@ -84,214 +87,70 @@ function demoControllers(gameState) {
 }
 
 gameState.updateGameStatus("init");
-const canvas = document.getElementById("stage");
-setStageDim(canvas);
-gameState.setState("canvas", canvas);
-gameState.setState("ctx", canvas.getContext("2d"));
 
-function startDemo2(gameState) {
-  gameState.removeAllCtrls();
-  const colors = [
-    "#ff0000",
-    "#ffa500",
-    "#ffff00",
-    "#008000",
-    "#0000ff",
-    "#4b0082",
-    "#ee82ee",
-  ];
-  const obstacles = [];
-
-  for (let i = 0; i < 20; i++) {
-    obstacles.push(
-      createEntity({
-        position: { x: Math.random() * 800, y: Math.random() * 600 },
-
-        collideBox: (element) => ({
-          a: element.position.x - element.box.w,
-          b: element.position.x + element.box.w,
-          c: element.position.y - element.box.h,
-          d: element.position.y + element.box.h,
-        }),
-
-        colIdx: -1,
-        type: "point",
-        box: { w: 5, h: 5 },
-        direction: {
-          x: Math.random() < 0.5 ? -1 : 1,
-          y: Math.random() < 0.5 ? -1 : 1,
-        },
-        r: 5,
-
-        color: "black",
-        moving: true,
-        canCollide: true,
-        run: (currentState, entity) => {
-          entity.position = {
-            y: entity.position.y + Math.random() * 1.5 * entity.direction.y,
-            x: entity.position.x + Math.random() * 1.5 * entity.direction.x,
-          };
-          if (entity.isColliding) {
-            const idx = (entity.colIdx + 1) % colors.length;
-            if (idx <= colors.length) {
-              entity.colIdx = idx;
-              entity.color = colors[idx];
-            }
-          }
-
-          return entity;
-        },
-        render: (currentState, entity) => {
-          const ctx = gameState.getState("ctx");
-          ctx.fillStyle = entity.color;
-
-          ctx.beginPath();
-          ctx.arc(
-            Math.floor(entity.position.x),
-            Math.floor(entity.position.y),
-            entity.r,
-            0,
-            2 * Math.PI
-          );
-          ctx.fill();
-        },
-        onBorderCollide: (gameState, element, border) => {
-          switch (border) {
-            case "left":
-            case "right":
-              element.direction.x = -element.direction.x;
-              break;
-            case "top":
-            case "bottom":
-              element.direction.y = -element.direction.y;
-              break;
-          }
-
-          gameState.updateState((gameData) => ({
-            ...gameData,
-            entities: gameData.entities.map((e) =>
-              e.id === element.id ? element : e
-            ),
-          }));
-        },
-      })
-    );
-  }
-
-  gameState.updateGameStatus("play").updateState((gameState) => ({
-    ...gameState,
-    demo: "2",
-    minFpsRender: Infinity,
-    minFps: Infinity,
-    showGrid: false,
-    entities: [...obstacles],
-  }));
-}
-
-function startDemo1(gameState) {
-  // Add the game Elements
-
+function startDemo(gameState) {
   gameState.removeAllCtrls();
 
-  const greenSq = createEntity({
-    position: { x: 0, y: 200 },
-    box: { w: 50, h: 50 },
-    pxXSec: 120,
-    moving: true,
-    canCollide: true,
-    collideBox: (element) => ({
-      a: element.position.x,
-      b: element.position.x + element.box.w,
-      c: element.position.y,
-      d: element.position.y + element.box.h,
-    }),
-    run: (gameState, entity) => {
-      if (gameState.gameStatus() === "play") {
-        let x = entity.position.x;
-        let y = entity.position.y;
-
-        const mv = gameState.getState("moveV");
-        const mh = gameState.getState("moveH");
-        if (mv === "up") {
-          y -= pxXSec2PxXFrame(entity.pxXSec, gameState);
-        } else if (mv === "down") {
-          y += pxXSec2PxXFrame(entity.pxXSec, gameState);
-        }
-        if (mh === "left") {
-          x -= pxXSec2PxXFrame(entity.pxXSec, gameState);
-        } else if (mh === "right") {
-          x += pxXSec2PxXFrame(entity.pxXSec, gameState);
-        }
-
-        entity.position.x = x;
-
-        entity.position.y = y;
-      }
-      return entity;
-    },
-    render: (gameState, entity) => {
+  const player = createEntity({
+    //position: getPointTile({ x: 400, y: 500 }),
+    render: (currentState, entity) => {
       const ctx = gameState.getState("ctx");
+      ctx.fillStyle = entity.color;
 
-      ctx.fillStyle = "green";
-      ctx.fillRect(
+      ctx.beginPath();
+      ctx.arc(
         Math.floor(entity.position.x),
-        entity.position.y,
-        entity.box.w,
-        entity.box.h
+        Math.floor(entity.position.y),
+        10,
+        0,
+        2 * Math.PI
       );
+      ctx.fill();
     },
   });
+  demoControllers(gameState);
 
-  const obstacles = [];
-
-  for (let i = 0; i < 400; i++) {
-    obstacles.push(
-      createEntity({
-        position: { x: Math.random() * 800, y: Math.random() * 600 },
-        type: "point",
-        box: { w: 10, h: 10 },
-        color: "blue",
-        canCollide: true,
-        collideBox: (element) => ({
-          a: element.position.x,
-          b: element.position.x + element.box.w,
-          c: element.position.y,
-          d: element.position.y + element.box.h,
-        }),
-        run: (currentState, entity) => {
-          if (entity.isColliding) {
-            entity = null;
-          } else {
-            entity.color = "blue";
-          }
-
-          return entity;
-        },
-        render: (currentState, entity) => {
-          const ctx = gameState.getState("ctx");
-          ctx.fillStyle = entity.color;
-          ctx.fillRect(
-            Math.floor(entity.position.x),
-            entity.position.y,
-            entity.box.w,
-            entity.box.h
-          );
-        },
-      })
-    );
-  }
-
-  gameState.updateGameStatus("play").updateState((gameState) => ({
-    ...gameState,
+  gameState.updateGameStatus("play").updateState((gameData) => ({
+    ...gameData,
+    map: setCamera(
+      generateMap(100, 100, gameData.tileSize),
+      { x: 0, y: 0 },
+      gameData.canvas.width,
+      gameData.canvas.height
+    ),
     demo: "1",
     minFpsRender: Infinity,
+    minFps: Infinity,
     showGrid: false,
 
-    minFps: Infinity,
-    entities: [greenSq, ...obstacles],
-  }));
+    entities: [
+      createEntity({
+        run: (gameState, element) => {
+          const mv = gameState.getState("moveV");
+          const mh = gameState.getState("moveH");
 
-  demoControllers(gameState);
+          let cameraPos = gameState.getState("map").cameraPos;
+          if (mv === "up") {
+            cameraPos.y -= 1;
+          } else if (mv === "down") {
+            cameraPos.y += 1;
+          }
+          if (mh === "left") {
+            cameraPos.x -= 1;
+          } else if (mh === "right") {
+            cameraPos.x += 1;
+          }
+          gameState.updateState((gameData) => ({
+            ...gameData,
+            map: { ...gameData.setCamera, cameraPos },
+          }));
+
+          return element;
+        },
+      }),
+    ],
+  }));
+  console.log(gameState.getState("map"));
 }
 /**
  * Create the game elements
@@ -334,18 +193,12 @@ const pauseMenu = createMenu(gameState, (menu, gameState) => {
 const mainMenu = createMenu(gameState, (menu, gameState) => {
   const menuContainer = domElement("#main-menu-container");
   const startBtn = domElement("#main-manu-start");
-  const startBtn2 = domElement("#main-manu-start2");
 
   const continueBtn = domElement("#main-manu-continue");
   const playButton = domElement("#main-manu-sound");
   startBtn.addEventListener("click", (evt) => {
     evt.preventDefault();
-    startDemo1(gameState);
-  });
-
-  startBtn2.addEventListener("click", (evt) => {
-    evt.preventDefault();
-    startDemo2(gameState);
+    startDemo(gameState);
   });
 
   continueBtn.addEventListener("click", (evt) => {
