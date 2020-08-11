@@ -199,6 +199,12 @@ function startDemo1(gameState) {
     pxXSec: 120,
     moving: true,
     canCollide: true,
+    collideBox: (element) => ({
+      a: element.position.x,
+      b: element.position.x + element.box.w,
+      c: element.position.y,
+      d: element.position.y + element.box.h,
+    }),
     run: (gameState, entity) => {
       if (gameState.gameStatus() === "play") {
         let x = entity.position.x;
@@ -246,6 +252,12 @@ function startDemo1(gameState) {
         box: { w: 10, h: 10 },
         color: "blue",
         canCollide: true,
+        collideBox: (element) => ({
+          a: element.position.x,
+          b: element.position.x + element.box.w,
+          c: element.position.y,
+          d: element.position.y + element.box.h,
+        }),
         run: (currentState, entity) => {
           if (entity.isColliding) {
             entity = null;
