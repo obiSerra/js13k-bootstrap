@@ -1,6 +1,6 @@
 import { renderText } from "./rendering.js";
 
-const loopSpeed = Math.round(1000 / 60);
+const loopSpeed = Math.round(1000 / 75);
 const cols = 100;
 const row = 100;
 
@@ -49,31 +49,57 @@ export default function gameLoop(gameState) {
 
   // Improve collision detection
   // https://developer.mozilla.org/en-US/docs/Games/Techniques/2D_collision_detection
-
   gameState.updateState((gameData) => ({
     ...gameData,
     entities: gameState
       .getState("entities", [])
       .map((element) => {
+        const map = gameData.map;
+        let tiledPos = {};
+
+        if (!element.position && element.player) {
+          element.position = {
+            x: (map.cols / 2) * map.tsize,
+            y: (map.rows / 2) * map.tsize,
+          };
+        }
+        tiledPos = {
+          x: element.position.x / map.tsize,
+          y: element.position.y / map.tsize,
+        };
+        const currentTile = {
+          c: Math.floor(tiledPos.x),
+          r: Math.floor(tiledPos.y),
+        };
+
+        const adj = [];
+
+        for (let r = -1; r <= 1; r++) {
+          for (let c = -1; c <= 1; c++) {
+            adj.push(map.getTile(currentTile.c + c, currentTile.r + r));
+          }
+        }
+        element.adj = adj;
+
+        if (element.position.x <= 0) {
+          element.borderCollide = "left";
+        } else if (element.position.x >= canvas.width) {
+          element.borderCollide = "right";
+        } else if (element.position.y <= 0) {
+          element.borderCollide = "top";
+        } else if (element.position.y >= canvas.height) {
+          element.borderCollide = "bottom";
+        } else {
+          element.borderCollide = null;
+        }
+
+        element.tiledPos = tiledPos;
         if (typeof element.run === "function") {
           element = element.run(gameState, element);
         }
         return element;
       })
-      .map((element) => {
-        if (element && typeof element.onBorderCollide === "function") {
-          if (element.position.x <= 0) {
-            element.onBorderCollide(gameState, element, "left");
-          } else if (element.position.x >= canvas.width) {
-            element.onBorderCollide(gameState, element, "right");
-          } else if (element.position.y <= 0) {
-            element.onBorderCollide(gameState, element, "top");
-          } else if (element.position.y >= canvas.height) {
-            element.onBorderCollide(gameState, element, "bottom");
-          }
-        }
-        return element;
-      })
+
       .filter((element) => !!element),
   }));
 
@@ -142,6 +168,7 @@ function renderGrid(gameState, cols, row) {
 function drawBox(gameState, entity) {
   if (typeof entity.collideBox !== "function") return false;
   const ctx = gameState.getState("ctx");
+
   ctx.beginPath(); // Start a new path
   ctx.strokeStyle = "red";
   const cb = entity.collideBox(entity);
@@ -152,6 +179,20 @@ function drawBox(gameState, entity) {
   ctx.lineTo(cb.a, cb.c);
 
   ctx.stroke();
+}
+
+function drawCamera(ctx, map, pov) {
+  ctx.beginPath();
+  ctx.fillStyle = "red";
+
+  ctx.arc(
+    Math.floor(map.cameraPos.x * map.tsize) + pov.x,
+    Math.floor(map.cameraPos.y * map.tsize) + pov.y,
+    10,
+    0,
+    2 * Math.PI
+  );
+  ctx.fill();
 }
 
 export function renderLoop(gameState) {
@@ -170,22 +211,25 @@ export function renderLoop(gameState) {
   const map = gameState.getState("map");
   ctx.fillStyle = "black";
 
-  // TODO calculate and render only tiles in view
   if (map) {
+    const ents = gameState.getState("entities") || [];
+    const player = ents.filter((e) => e.player)[0];
+    if (player && player.position) {
+    }
     const pov = {
       x: canvas.width / 2 - map.cameraPos.x * map.tsize,
       y: canvas.height / 2 - map.cameraPos.y * map.tsize,
     };
+    gameState.setState("cameraPov", pov);
     const startCol = Math.max(0, map.cameraPos.x - map.viewWidth / 2);
     const endCol = Math.min(map.cols, map.cameraPos.x + map.viewWidth / 2);
     const startRow = Math.max(0, map.cameraPos.y - map.viewHeight / 2);
     const endRow = Math.min(map.rows, map.cameraPos.y + map.viewHeight / 2);
-
     ctx.beginPath();
     ctx.fillStyle = "black";
 
-    for (var c = startCol; c < endCol; c++) {
-      for (var r = startRow; r < endRow; r++) {
+    for (var r = startRow; r < endRow; r++) {
+      for (var c = startCol; c < endCol; c++) {
         var tile = map.getTile(c, r);
 
         if (tile) {
@@ -201,17 +245,7 @@ export function renderLoop(gameState) {
     }
     ctx.fill();
 
-    ctx.beginPath();
-    ctx.fillStyle = "red";
-
-    ctx.arc(
-      Math.floor(map.cameraPos.x * map.tsize) + pov.x,
-      Math.floor(map.cameraPos.y * map.tsize) + pov.y,
-      10,
-      0,
-      2 * Math.PI
-    );
-    ctx.fill();
+    drawCamera(ctx, map, pov);
   }
 
   renderFps(`${gameState.getState("actualFps")} FPS`, { x: 755, y: 580 });
@@ -247,7 +281,7 @@ export function renderLoop(gameState) {
     }
   }
   entities.forEach((element) => {
-    if (typeof element.render === "function") {
+    if (typeof element.render === "function" && element.position) {
       element.render(gameState, element);
       drawBox(gameState, element);
     }

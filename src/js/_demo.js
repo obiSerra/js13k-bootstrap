@@ -18,7 +18,7 @@ import { playSound } from "./audio.js";
 
 const gameState = createState({
   showFps: true,
-  tileSize: 20,
+  tileSize: 10,
 });
 
 function demoControllers(gameState) {
@@ -91,30 +91,12 @@ gameState.updateGameStatus("init");
 function startDemo(gameState) {
   gameState.removeAllCtrls();
 
-  const player = createEntity({
-    //position: getPointTile({ x: 400, y: 500 }),
-    render: (currentState, entity) => {
-      const ctx = gameState.getState("ctx");
-      ctx.fillStyle = entity.color;
-
-      ctx.beginPath();
-      ctx.arc(
-        Math.floor(entity.position.x),
-        Math.floor(entity.position.y),
-        10,
-        0,
-        2 * Math.PI
-      );
-      ctx.fill();
-    },
-  });
   demoControllers(gameState);
 
   gameState.updateGameStatus("play").updateState((gameData) => ({
     ...gameData,
     map: setCamera(
-      generateMap(100, 100, gameData.tileSize),
-      { x: 0, y: 0 },
+      generateMap(80, 60, gameData.tileSize),
       gameData.canvas.width,
       gameData.canvas.height
     ),
@@ -125,25 +107,105 @@ function startDemo(gameState) {
 
     entities: [
       createEntity({
+        box: { w: 10, h: 10 },
+        player: true,
+        render: (gameState, player) => {
+          if (!player.tiledPos) return false;
+          const map = gameState.getState("map");
+          const ctx = gameState.getState("ctx");
+          ctx.beginPath();
+          ctx.fillStyle = "green";
+
+          ctx.arc(
+            player.tiledPos.x * map.tsize,
+            player.tiledPos.y * map.tsize,
+            10,
+            0,
+            2 * Math.PI
+          );
+          ctx.fill();
+        },
+        collideBox: (element) => ({
+          a: element.position.x - element.box.w,
+          b: element.position.x + element.box.w,
+          c: element.position.y - element.box.h,
+          d: element.position.y + element.box.h,
+        }),
+
         run: (gameState, element) => {
           const mv = gameState.getState("moveV");
           const mh = gameState.getState("moveH");
+          if (element.borderCollide) {
+            gameState.updateState((gameData) => {
+              let cameraPos = gameData.map.cameraPos;
+              const tsize = gameData.map.tsize;
 
-          let cameraPos = gameState.getState("map").cameraPos;
-          if (mv === "up") {
-            cameraPos.y -= 1;
-          } else if (mv === "down") {
-            cameraPos.y += 1;
+              switch (element.borderCollide) {
+                case "left":
+                  cameraPos.x--;
+                  element.position.x += tsize;
+                  break;
+                case "right":
+                  cameraPos.x++;
+                  element.position.x -= tsize;
+                  break;
+                case "top":
+                  cameraPos.y--;
+                  element.position.y += tsize;
+                  break;
+                case "bottom":
+                  cameraPos.y++;
+                  element.position.y -= tsize;
+                  break;
+              }
+              const newData = {
+                ...gameData,
+                map: { ...gameData.map, cameraPos },
+              };
+              return newData;
+            });
           }
-          if (mh === "left") {
-            cameraPos.x -= 1;
-          } else if (mh === "right") {
-            cameraPos.x += 1;
+
+          const adj = element.adj || [];
+
+          const blocked = { t: false, r: false, b: false, l: false };
+
+          adj.forEach((element, idx) => {
+            if (!!element) {
+              if (idx === 1) {
+                blocked.t = true;
+              }
+              if (idx === 7) {
+                blocked.b = true;
+              }
+
+              if (idx === 3) {
+                blocked.l = true;
+              }
+              if (idx === 5) {
+                blocked.r = true;
+              }
+            }
+          });
+
+          if (mv === "up" && element.borderCollide !== "top" && !blocked.t) {
+            element.position.y -= 1;
+          } else if (
+            mv === "down" &&
+            element.borderCollide !== "bottom" &&
+            !blocked.b
+          ) {
+            element.position.y += 1;
           }
-          gameState.updateState((gameData) => ({
-            ...gameData,
-            map: { ...gameData.setCamera, cameraPos },
-          }));
+          if (mh === "left" && element.borderCollide !== "left" && !blocked.l) {
+            element.position.x -= 1;
+          } else if (
+            mh === "right" &&
+            element.borderCollide !== "right" &&
+            !blocked.r
+          ) {
+            element.position.x += 1;
+          }
 
           return element;
         },
