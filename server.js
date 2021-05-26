@@ -1,29 +1,15 @@
 const express = require("express");
 const app = express();
-const port = 3000;
-const compileSass = require("express-compile-sass");
+const modes = {
+  dev: { name: "development", port: 3001, root: "./src" },
+  stg: { name: "staging", port: 3002, root: "./build" },
+  prod: { name: "production", port: 3003, root: "./dist" },
+};
 
-let env = "dev";
-process.argv.forEach(function (val, index) {
-  if (val === "-p") {
-    env = "prod";
-  }
+const mode = modes[`${process.argv[2]}`.replace(/^--/, "")] ?? modes.dev;
+
+app.use(express.static(mode.root));
+
+app.listen(mode.port, () => {
+  console.log(`App mode: ${mode.name} listening at http://localhost:${mode.port}`);
 });
-
-const root = env === "dev" ? "src" : "dist";
-
-app.use(
-  compileSass({
-    root: root,
-    sourceMap: true, // Includes Base64 encoded source maps in output css
-    sourceComments: true, // Includes source comments in output css
-    watchFiles: true, // Watches sass files and updates mtime on main files for each change
-    logToConsole: false, // If true, will log to console.error on errors
-  })
-);
-
-app.use(express.static(root));
-
-app.listen(port, () => console.log(`Application env ${env.toUpperCase()} listening at http://localhost:${port}`));
-
-// print process.argv
