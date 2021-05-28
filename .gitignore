@@ -2,3 +2,4 @@ node_modules/
 dist/
 build/
 *.zip
+src/svg_map.js

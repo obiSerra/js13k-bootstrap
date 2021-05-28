@@ -1,6 +1,3 @@
-export function hello() {
-  console.log("hello there!!!");
-}
-export default function world() {
-  console.log("hello there!!!");
+export function qSel(sel, queryAll = false, root = document) {
+  return queryAll ? root.querySelectorAll(sel) : root.querySelector(sel);
 }
