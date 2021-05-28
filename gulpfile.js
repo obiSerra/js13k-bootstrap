@@ -1,33 +1,62 @@
 const { series, src, dest } = require("gulp");
 const concat = require("gulp-concat");
 const clean = require("gulp-clean");
+const eslint = require("gulp-eslint");
+const minify = require("gulp-minify");
 
 const fs = require("fs");
 
 const codeSrc = "./src/**/*.js";
 const indexFile = "./src/index.html";
-const outDir = "./build";
-const outIndex = `${outDir}/index.html`;
-const cleanDest = `${outDir}/*.js`;
+const outBuild = "./build";
+const outDist = "./dist";
+const outBuildIndex = `${outBuild}/index.html`;
+const buildJsFiles = `${outBuild}/*.js`;
+const buildClean = `${outBuild}/*`;
+const distJsFiles = `${outDist}/*.js`;
+const distClean = `${outDist}/*`;
 const outFile = "main.js";
-const concatFile = `${outDir}/${outFile}`;
+const concatFile = `${outBuild}/${outFile}`;
 
-function cleanTask() {
-  return src(cleanDest).pipe(clean({ read: false, force: true }));
+function cleanBuildTask() {
+  return src(buildClean).pipe(clean({ read: false, force: true }));
+}
+
+function cleanDistTask() {
+  return src(distClean).pipe(clean({ read: false, force: true }));
+}
+
+function lintConcat() {
+  return src([buildJsFiles])
+    .pipe(eslint({ rules: {} }))
+    .pipe(eslint.formatEach())
+    .pipe(eslint.failAfterError());
+}
+
+function compress() {
+  return src([buildJsFiles])
+    .pipe(
+      minify({
+        ext: {
+          min: ".min.js",
+        },
+      })
+    )
+    .pipe(dest(outDist));
 }
 
 function copyIndex(cb) {
-    fs.readFile(indexFile, "utf8", (err, data) => {
-        if (err) {
-          console.error(err);
-          return;
-        }
-        
-        fs.writeFile(outIndex, data, (err) => {
-          if (err) return console.log(err);
-          cb();
-        });
-      });
+  fs.readFile(indexFile, "utf8", (err, data) => {
+    if (err) {
+      console.error(err);
+      return;
+    }
+
+    fs.writeFile(outBuildIndex, data, err => {
+      if (err) return console.log(err);
+      cb();
+    });
+  });
 }
 
 function removeModules(cb) {
@@ -36,8 +65,13 @@ function removeModules(cb) {
       console.error(err);
       return;
     }
-    const cleaned = data.replace(/^export (default )?/mg, "").replace(/^import .*/mg, "").split('\n').filter(l => !!l).join('\n')
-    fs.writeFile(concatFile, cleaned, (err) => {
+    const cleaned = data
+      .replace(/^export (default )?/gm, "")
+      .replace(/^import .*/gm, "")
+      .split("\n")
+      .filter(l => !!l)
+      .join("\n");
+    fs.writeFile(concatFile, cleaned, err => {
       if (err) return console.log(err);
       cb();
     });
@@ -45,9 +79,11 @@ function removeModules(cb) {
 }
 
 function concatTask() {
-  return src(codeSrc).pipe(concat(outFile)).pipe(dest(outDir));
+  return src(codeSrc).pipe(concat(outFile)).pipe(dest(outBuild));
 }
 
-const build = series(cleanTask, concatTask, removeModules, copyIndex);
+const build = series(cleanBuildTask, concatTask, removeModules, lintConcat, copyIndex);
+const dist = series(build, cleanDistTask, compress);
 exports.build = build;
+exports.dist = dist;
 exports.default = series(clean, build);
