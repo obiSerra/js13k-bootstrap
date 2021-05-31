@@ -3,3 +3,4 @@ dist/
 build/
 *.zip
 src/svg_map.js
+test/e2e/imgs
