@@ -6,6 +6,7 @@
   "scripts": {
     "build": "gulp build",
     "start": "node server.js",
+    "compressSVG": "gulp compressSVG",
     "watch": "gulp watchAndBuild",
     "server:stg": "nodemon server.js --stg",
     "start:stg": "yarn build && node server.js --stg",

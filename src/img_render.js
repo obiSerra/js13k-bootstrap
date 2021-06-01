@@ -1,3 +1,5 @@
+// svg <div>Icons made by <a href="https://www.freepik.com" title="Freepik">Freepik</a> from <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a></div>
+
 import svg_images from "./svg_map.js";
 
 const imgMap = svg_images();
@@ -6,7 +8,10 @@ export class GImage {
   constructor(imgName) {
     const parser = new DOMParser();
     const img = imgMap[imgName];
-    const doc = parser.parseFromString(img, "image/svg+xml");
+    this.fmt = "image/svg+xml"
+    this.b64Fmt = `data:${this.fmt};base64,`
+    
+    const doc = parser.parseFromString(img, this.fmt);
     this.svg = doc.querySelector("svg");
     this.t = {};
     this.w = this.svg.width.baseVal.value;
@@ -25,7 +30,6 @@ export class GImage {
       acc += `${k}(${this.t[k]}) `;
       return acc;
     }, "");
-   
     this._setAtt("transform", trs)
   }
 
@@ -47,33 +51,10 @@ export class GImage {
     this._setAllAtt();
     const s = new XMLSerializer();
     const svg64 = btoa(s.serializeToString(this.svg));
-    const b64Start = "data:image/svg+xml;base64,";
-
-    const image64 = b64Start + svg64;
+    const image64 = this.b64Fmt + svg64;
 
     const img = new Image();
     img.src = image64;
     return img;
   }
-}
-
-export function renderImage(imgName, width = null, height = null) {
-  const parser = new DOMParser();
-  const img = imgMap[imgName];
-  const doc = parser.parseFromString(img, "image/svg+xml");
-  const svg = doc.querySelector("svg");
-
-  const angle = 20;
-  svg.setAttribute("height", 70);
-  svg.setAttribute("transform", `rotate(${angle})`);
-  const s = new XMLSerializer();
-
-  var svg64 = btoa(s.serializeToString(svg));
-  var b64Start = "data:image/svg+xml;base64,";
-
-  var image64 = b64Start + svg64;
-  const img2 = new Image();
-
-  img2.src = image64;
-  return img2;
 }
