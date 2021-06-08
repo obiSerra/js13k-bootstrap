@@ -5,6 +5,7 @@ const eslint = require("gulp-eslint");
 const minify = require("gulp-minify");
 const through = require("through2");
 const Vinyl = require("vinyl");
+var svgmin = require("gulp-svgmin");
 
 const fs = require("fs");
 
@@ -23,6 +24,7 @@ const concatFile = `${outBuild}/${outFile}`;
 function compressSVG(cb) {
   const images = {};
   src("./assets/**/*.svg")
+    .pipe(svgmin())
     .pipe(
       through.obj((file, enc, cb) => {
         const key = file.path.replace(/^.*\/assets\//, "").replace(/\.svg$/, "");
@@ -128,7 +130,7 @@ function concatTask() {
 const build = series(cleanBuildTask, concatTask, removeModules, /*lintConcat,*/ copyIndex);
 
 function watchAndBuild(cb) {
-  watch([codeSrc, indexFile], build)
+  watch([codeSrc, indexFile], build);
 }
 
 const dist = series(build, cleanDistTask, compress);

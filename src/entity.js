@@ -1,3 +1,5 @@
+import { GAnimation, GImage } from "./img_render";
+
 export class Point {
   constructor(x, y) {
     this.x = x;
@@ -6,20 +8,35 @@ export class Point {
 }
 
 export class Entity {
-    constructor(p, image = null) {
-      this.p = p;
-      if (image) {
-        this.image = image.getImg();
-      }
-    }
-  
-    update() {}
-  
-    bindUpdate(updateFn) {
-      this.update = dt => updateFn(this, dt);
-    }
-  
-    render(ctx) {
-      ctx.drawImage(this.image, this.p.x, this.p.y);
+  constructor(p, image = null, box2d = null) {
+    this.p = p;
+    this.box2d = box2d;
+    if (image && image instanceof GImage) {
+      this.image = image;
+    } else if (image && image instanceof GAnimation) {
+      this.animation = image;
     }
   }
+
+  update(dt) {
+    if (typeof this.updateFn === "function") return this.updateFn(dt);
+    else return this;
+  }
+
+  bindUpdate(updateFn) {
+    this.updateFn = dt => updateFn(this, dt);
+  }
+
+  render(ctx, tick) {
+    if (this.box2d) {
+      this.box2d.renderBox(ctx);
+    }
+    if (this.image){
+      ctx.drawImage(this.image.getImg(), this.p.x, this.p.y, this.image.w, this.image.h);
+    } 
+    else if (this.animation) {
+      const img = this.animation.getFrame(tick);
+      ctx.drawImage(img.getImg(), this.p.x, this.p.y, img.w, img.h);
+    }
+  }
+}

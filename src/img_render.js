@@ -8,14 +8,16 @@ export class GImage {
   constructor(imgName) {
     const parser = new DOMParser();
     const img = imgMap[imgName];
-    this.fmt = "image/svg+xml"
-    this.b64Fmt = `data:${this.fmt};base64,`
-    
+    this.fmt = "image/svg+xml";
+    this.b64Fmt = `data:${this.fmt};base64,`;
+
     const doc = parser.parseFromString(img, this.fmt);
     this.svg = doc.querySelector("svg");
     this.t = {};
-    this.w = this.svg.width.baseVal.value;
-    this.h = this.svg.height.baseVal.value;
+    this.origin_w = this.w = this.svg.width.baseVal.value;
+    this.origin_h = this.h = this.svg.height.baseVal.value;
+
+    console.log(this.svg, this.w, this.h);
   }
 
   _setAtt(name, val) {
@@ -23,14 +25,11 @@ export class GImage {
   }
 
   _setAllAtt() {
-    if (this.h) this._setAtt("height", this.h);
-    if (this.w) this._setAtt("width", this.w);
-
     const trs = Object.keys(this.t).reduce((acc, k) => {
       acc += `${k}(${this.t[k]}) `;
       return acc;
     }, "");
-    this._setAtt("transform", trs)
+    this._setAtt("transform", trs);
   }
 
   setT(name, vals) {
@@ -47,7 +46,8 @@ export class GImage {
     return this.getT("rotate");
   }
 
-  getImg() {
+  getImg(cached = true) {
+    if (cached && this.img) return this.img;
     this._setAllAtt();
     const s = new XMLSerializer();
     const svg64 = btoa(s.serializeToString(this.svg));
@@ -55,6 +55,21 @@ export class GImage {
 
     const img = new Image();
     img.src = image64;
+    this.img = img;
     return img;
+  }
+}
+
+export class GAnimation {
+  constructor(frames) {
+    this.frames = frames;
+    this.frameRate = 10;
+  }
+  _currentFrame(tick) {
+    return Math.round(tick / this.frameRate) % this.frames.length;
+  }
+
+  getFrame(tick) {
+    return this.frames[this._currentFrame(tick)];
   }
 }

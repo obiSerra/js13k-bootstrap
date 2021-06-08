@@ -20,7 +20,7 @@ export class Game {
   }
 
   stepRender(timestamp) {
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    
     if (!this.start) this.start = timestamp;
     const dt = timestamp - this.start;
 
@@ -34,7 +34,8 @@ export class Game {
       this.entities = this.entities.map(e => e.update(this.dt));
     }
     this.tick++;
-    this.entities.forEach(e => e.render(this.ctx));
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.entities.forEach(e => e.render(this.ctx, this.tick));
 
     this.start = timestamp;
     window.requestAnimationFrame(this.stepRender.bind(this));
