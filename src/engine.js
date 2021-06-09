@@ -8,7 +8,7 @@ export class Game {
     this.tick = 0;
     this.uFps = 1000 / 60;
     this.dt = 0;
-    this.pauseTrashold = 200
+    this.pauseTrashold = 200;
   }
 
   appendEntity(e) {
@@ -19,21 +19,45 @@ export class Game {
     window.requestAnimationFrame(t => this.stepRender(t));
   }
 
+  collisions() {
+    const boxed = this.entities.filter(e => !!e.box2d);
+    for (let i in boxed) {
+      const a = boxed[i]
+      const bxA = a.box2d;
+      for (let j in boxed) {
+        if (j !== i) {
+          const b = boxed[j]
+          const bxB = b.box2d;
+
+        
+          //console.log("a bottom ", bxA.p.y + bxA.b.h, "   ~aTop ", bxA.p.y)
+          const ov = !(bxA.p.x + bxA.b.w < bxB.p.x || bxA.p.x > bxB.p.x + bxB.b.w || bxA.p.y + bxA.b.h < bxB.p.y || bxA.p.y > bxB.p.y + bxB.b.h);
+          if (ov){
+            console.log("COOOOOOOO")
+          
+          } 
+          if (ov && a.onCollide) {
+            a.onCollide(a);
+          }
+        }
+      }
+    }
+  }
+
   stepRender(timestamp) {
-    
     if (!this.start) this.start = timestamp;
     const dt = timestamp - this.start;
 
     if (dt > this.pauseTrashold) {
-        console.log("pause")
+      console.log("pause");
     }
-    //this.entities = this.entities.map(e => e.update(dt));
     this.dt += dt;
     if (this.dt >= this.uFps) {
+      this.tick++;
       this.dt = this.uFps % this.dt;
       this.entities = this.entities.map(e => e.update(this.dt));
     }
-    this.tick++;
+    this.collisions();
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.entities.forEach(e => e.render(this.ctx, this.tick));
 

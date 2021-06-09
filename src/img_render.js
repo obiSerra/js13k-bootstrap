@@ -16,8 +16,6 @@ export class GImage {
     this.t = {};
     this.origin_w = this.w = this.svg.width.baseVal.value;
     this.origin_h = this.h = this.svg.height.baseVal.value;
-
-    console.log(this.svg, this.w, this.h);
   }
 
   _setAtt(name, val) {
@@ -44,6 +42,19 @@ export class GImage {
   }
   getRotate() {
     return this.getT("rotate");
+  }
+
+  changeColor(origin, newColor, type = "both") {
+    const paths = Array.from(this.svg.getElementsByTagName("path"));
+    const update = (t, p) => {
+      if ((type === "both" || type === t) && p.getAttribute(t) === origin)  p.setAttribute(t, newColor);
+      
+    }
+    paths.forEach(p => {
+      update('fill', p)
+      update('both', p)
+      
+    });
   }
 
   getImg(cached = true) {

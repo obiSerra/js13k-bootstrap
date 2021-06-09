@@ -6,11 +6,19 @@ export class Point {
     this.y = y;
   }
 }
+export class Box {
+  constructor(w, h) {
+    this.w = w;
+    this.h = h;
+  }
+}
 
 export class Entity {
-  constructor(p, image = null, box2d = null) {
+  constructor(p, b, image = null, box2d = null) {
     this.p = p;
+    this.b = b
     this.box2d = box2d;
+    this.actions = []
     if (image && image instanceof GImage) {
       this.image = image;
     } else if (image && image instanceof GAnimation) {
@@ -26,6 +34,11 @@ export class Entity {
   bindUpdate(updateFn) {
     this.updateFn = dt => updateFn(this, dt);
   }
+
+  bindOnCollide(onCollideFn) {
+    this.onCollide = c => onCollideFn(this, c)
+  }
+
 
   render(ctx, tick) {
     if (this.box2d) {
