@@ -1,8 +1,8 @@
-import { qSel } from "./dom_utils.js";
-import { GAnimation, GImage } from "./img_render.js";
-import { Game } from "./engine.js";
-import { KeyControl, baseMovCtrl } from "./controls.js";
-import { Entity } from "./entity.js";
+import { qSel } from "./lib/dom_utils.js";
+import { GAnimation, GImage } from "./lib/img_render.js";
+import { Game } from "./lib/engine.js";
+import { KeyControl, baseMovCtrl } from "./lib/controls.js";
+import { Entity } from "./lib/entity.js";
 
 const canvas = qSel("canvas");
 canvas.width = 800;
@@ -12,15 +12,14 @@ const ctx = canvas.getContext("2d");
 
 const anim = new GAnimation([new GImage("robot"), new GImage("robot-2")]);
 
-// const pEnemy = new Point(400, 200);
- const imgEnemy = new GImage("robot");
+const imgEnemy = new GImage("robot");
 imgEnemy.changeColor("#fc0", "red", "fill");
- imgEnemy.changeColor("#0cf", "purple", "fill");
+imgEnemy.changeColor("#0cf", "purple", "fill");
 
-const enemy = new Entity([400,200], [60,60]);
-enemy.setBox2D(true)
-enemy.setImage(imgEnemy)
-// TODO reduce boilerplate
+const enemy = new Entity([400, 200], [60, 60]);
+enemy.setBox2D(true);
+enemy.setImage(imgEnemy);
+
 
 const rocket = new Entity([0, 0], [60, 60]);
 rocket.setBox2D(true);

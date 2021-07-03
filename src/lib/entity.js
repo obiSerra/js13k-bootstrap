@@ -14,12 +14,6 @@ export class Box {
   }
 }
 
-/**
- * class Entity
- *
- * Represent an entity in the game
- *
- */
 export class Entity {
   constructor(position, sizes, speed = 0) {
     this.setBaseSpeed(speed);
@@ -52,7 +46,6 @@ export class Entity {
       });
     }
   }
-
   updatePosition(self) {
     self.p.x += self.vects.x;
     self.p.y += self.vects.y;
@@ -89,9 +82,6 @@ export class Entity {
     }
 
     const elast = 0.5;
-
-    // TODO
-    // Calculate new vector angle
 
     if (collDir.l || collDir.r) this.vects.x = -1 * elast * x;
     if (collDir.t || collDir.b) this.vects.y = -1 * elast * y;

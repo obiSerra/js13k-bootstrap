@@ -5,10 +5,10 @@ export class Box2d {
     this.inertia = null;
   }
 
+
   rectangle(o) {
     const { x: l, y: t } = o.p;
     const { w, h } = o.b;
-
     return { l, t, r: l + w, b: t + h };
   }
 

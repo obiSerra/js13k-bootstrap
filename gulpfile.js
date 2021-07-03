@@ -9,6 +9,8 @@ var svgmin = require("gulp-svgmin");
 
 const fs = require("fs");
 
+const mainjs = "./src/main.js"
+const concatSrc = ["./src/**/*.js", `!${mainjs}`, mainjs];
 const codeSrc = "./src/**/*.js";
 const indexFile = "./src/index.html";
 const outBuild = "./build";
@@ -41,25 +43,15 @@ function compressSVG(cb) {
       through.obj((chunk, enc, cb) => {
         const jsFile = new Vinyl({
           cwd: chunk.cwd,
-          base: chunk.cwd + "/src",
-          path: chunk.cwd + "/src/svg_map.js",
+          base: chunk.cwd + "/src/lib/",
+          path: chunk.cwd + "/src/lib/svg_map.js",
           contents: Buffer.from(`export default function svg_images(){\n return ${JSON.stringify(images)} \n}`),
         });
         cb(null, jsFile);
       })
     )
-    .pipe(dest("./src/"));
-  // return Promise.all()
-  // new Promise((resolve, reject) => {
-  //   fs.readFile("./assets/maple-syrup.svg", "utf8", (err, data) => {
-  //     if (err) {
-  //       console.error(err);
-  //       return;
-  //     }
-  //     console.log(data)
-  //     resolve()
-  //   });
-  // })
+    .pipe(dest("./src/lib"));
+  
   cb();
 }
 
@@ -124,7 +116,7 @@ function removeModules(cb) {
 }
 
 function concatTask() {
-  return src(codeSrc).pipe(concat(outFile)).pipe(dest(outBuild));
+  return src(concatSrc).pipe(concat(outFile)).pipe(dest(outBuild));
 }
 
 const build = series(cleanBuildTask, concatTask, removeModules, /*lintConcat,*/ copyIndex);

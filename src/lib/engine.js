@@ -34,6 +34,7 @@ export class Game {
       }
     }
   }
+  
 
   stepRender(timestamp) {
     if (!this.start) this.start = timestamp;
