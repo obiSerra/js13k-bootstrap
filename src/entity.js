@@ -25,7 +25,7 @@ export class Entity {
     this.setBaseSpeed(speed);
     this.updateFns = [];
     this.vects = { x: 0, y: 0 };
-    this.p = new Point(position[0], position[1]);
+    this.p = new Point(position[0] + sizes[0] / 2, position[1] + sizes[1] / 2);
     this.b = new Box(...sizes);
 
     this.collision = {};
@@ -72,19 +72,66 @@ export class Entity {
     this.updateFns.push((self, dt) => updateFn(self, dt));
   }
 
+  _onCollide(b) {
+    const { x, y } = this.vects;
+
+    
+    const collDir = this.box2d.collideDir(b, this.vects)
+    // Adjust overlapping pos
+    while (this.box2d.isColliding(b)) {
+      if (x) {
+        this.p.x -= this.s * x;
+      }
+
+      if (y) {
+        this.p.y -= this.s * y;
+      }
+    }
+
+    const elast = 0.5;
+
+    // TODO
+    // Calculate new vector angle
+
+    if (collDir.l || collDir.r) this.vects.x = -1 * elast * x;
+    if (collDir.t || collDir.b) this.vects.y = -1 * elast * y;
+  }
+
   bindOnCollide(onCollideFn) {
-    this.onCollide = c => onCollideFn(this, c);
+    this.onCollide = c => {
+      this._onCollide(c);
+      if (typeof onCollideFn === "function") return onCollideFn(this, c);
+      return this;
+    };
+  }
+
+  aVector() {
+    const { x: vx, y: vy } = this.vects;
+    return { a: Math.atan2(vy, vx), f: Math.sqrt(vy * vy + vx * vx) };
   }
 
   render(ctx, tick) {
-    if (this.box2d) {
-      this.box2d.renderBox(ctx);
-    }
     if (this.image) {
-      ctx.drawImage(this.image.getImg(), this.p.x, this.p.y, this.image.w, this.image.h);
+      ctx.drawImage(this.image.getImg(), this.p.x - this.b.w / 2, this.p.y - this.b.h / 2, this.image.w, this.image.h);
     } else if (this.animation) {
       const img = this.animation.getFrame(tick);
-      ctx.drawImage(img.getImg(), this.p.x, this.p.y, img.w, img.h);
+      ctx.drawImage(img.getImg(), this.p.x - this.b.w / 2, this.p.y - this.b.h / 2, img.w, img.h);
+    }
+
+    if (this.box2d) {
+      this.box2d.renderBox(ctx);
+      if (this.vects.x || this.vects.y) {
+        const { a, f } = this.aVector();
+        let { x, y } = this.p;
+
+        const d = Math.min(f, Math.max(this.b.w, this.b.h)) * 2;
+        ctx.beginPath(); // Start a new path
+        ctx.moveTo(x, y); // Move the pen to (30, 50)
+        const xx = x + d * Math.cos(a);
+        const yy = y + d * Math.sin(a);
+        ctx.lineTo(xx, yy); // Draw a line to (150, 100)
+        ctx.stroke();
+      }
     }
   }
 
@@ -121,5 +168,6 @@ export class Entity {
     }
 
     if (Math.abs(this.vects.y) < 0.1) this.vects.y = 0;
+    if (Math.abs(this.vects.x) < 0.1) this.vects.x = 0;
   }
 }

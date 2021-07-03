@@ -13,14 +13,13 @@ const ctx = canvas.getContext("2d");
 const anim = new GAnimation([new GImage("robot"), new GImage("robot-2")]);
 
 // const pEnemy = new Point(400, 200);
-// const imgEnemy = new GImage("robot");
-// imgEnemy.changeColor("#fc0", "red", "fill");
-// imgEnemy.changeColor("#0cf", "purple", "fill");
+ const imgEnemy = new GImage("robot");
+imgEnemy.changeColor("#fc0", "red", "fill");
+ imgEnemy.changeColor("#0cf", "purple", "fill");
 
-// imgEnemy.w = 60;
-// imgEnemy.h = 60;
-//const enemy = new Entity(pEnemy, new Box(60, 60), imgEnemy, new Box2d(d, pEnemy));
-
+const enemy = new Entity([400,200], [60,60]);
+enemy.setBox2D(true)
+enemy.setImage(imgEnemy)
 // TODO reduce boilerplate
 
 const rocket = new Entity([0, 0], [60, 60]);
@@ -32,11 +31,7 @@ const down = new KeyControl(40);
 const left = new KeyControl(37);
 const right = new KeyControl(39);
 
-rocket.bindOnCollide((self, c) => {
-  //console.log(self.collision);
-
-  return self;
-});
+rocket.bindOnCollide(true);
 
 rocket.bindUpdate(baseMovCtrl(up, down, left, right));
 
@@ -48,6 +43,6 @@ rocket.bindUpdate((e, dt) => {
 });
 const game = new Game({}, canvas, ctx);
 game.appendEntity(rocket);
-//game.appendEntity(enemy);
+game.appendEntity(enemy);
 
 game.run();
