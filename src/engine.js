@@ -22,21 +22,23 @@ export class Game {
   collisions() {
     const boxed = this.entities.filter(e => !!e.box2d);
     for (let i in boxed) {
-      const a = boxed[i]
+      const a = boxed[i];
       const bxA = a.box2d;
       for (let j in boxed) {
         if (j !== i) {
-          const b = boxed[j]
+          const b = boxed[j];
           const bxB = b.box2d;
 
-        
-          //console.log("a bottom ", bxA.p.y + bxA.b.h, "   ~aTop ", bxA.p.y)
-          const ov = !(bxA.p.x + bxA.b.w < bxB.p.x || bxA.p.x > bxB.p.x + bxB.b.w || bxA.p.y + bxA.b.h < bxB.p.y || bxA.p.y > bxB.p.y + bxB.b.h);
-          if (ov){
-            console.log("COOOOOOOO")
-          
-          } 
+          const ov = !(
+            bxA.p.x + bxA.b.w < bxB.p.x ||
+            bxA.p.x > bxB.p.x + bxB.b.w ||
+            bxA.p.y + bxA.b.h < bxB.p.y ||
+            bxA.p.y > bxB.p.y + bxB.b.h
+          );
+
           if (ov && a.onCollide) {
+            console.log(a);
+
             a.onCollide(a);
           }
         }
